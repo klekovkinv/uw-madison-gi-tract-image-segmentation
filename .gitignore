@@ -133,3 +133,7 @@ data/
 
 # pycharm
 .idea/
+
+# MONAI
+MONAI/
+

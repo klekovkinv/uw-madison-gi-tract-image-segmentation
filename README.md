@@ -1,5 +1,13 @@
 # uw-madison-gi-tract-image-segmentation
 
 #### Env
-`curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -`  
+##### Clone MONAI - USELESS
+`git clone https://github.com/Project-MONAI/MONAI.git`
+`cd MONAI`
+`git checkout 564c6be8b4aa2edffb54b094c5e623a0256612e0`
+
+1. `poetry install`  
+2. `poetry shell`  
+3. `cd src`  
+4. 
 
