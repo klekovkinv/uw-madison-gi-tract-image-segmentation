@@ -7,16 +7,19 @@ from monai.data import NibabelWriter
 import numpy as np
 import os
 import pandas as pd
+from sklearn.model_selection import StratifiedGroupKFold
 
 
 # CONSTANTS
 DATA_DIR = '../data'
+N_FOLDS = 5
+SEED = 42
 
 # Open the training dataframe and display the initial dataframe
 # the way to process the df refers to:
 # https://www.kaggle.com/code/dschettler8845/uwmgit-deeplabv3-end-to-end-pipeline-tf
 
-DATA_DIR = "../input/uw-madison-gi-tract-image-segmentation/"
+#DATA_DIR = "../input/uw-madison-gi-tract-image-segmentation/"
 
 TRAIN_CSV = os.path.join(DATA_DIR, "train.csv")
 train_df = pd.read_csv(TRAIN_CSV)
@@ -84,15 +87,23 @@ def df_preprocessing(df, globbed_file_list, is_test=False):
 
     return df
 
+
 train_df = df_preprocessing(train_df, all_train_images)
 # I use the same data splits as AWSAF does
 # the splits.csv refers to:
 # https://www.kaggle.com/code/awsaf49/uwmgi-unet-train-pytorch/
-splits = pd.read_csv("../input/uwdatapreprocessing/splits.csv")
 
-train_df = train_df.merge(splits, on="id")
+#splits = pd.read_csv("../input/uwdatapreprocessing/splits.csv")
+# train_df = train_df.merge(splits, on="id")
+# train_df["fold"] = train_df["fold"].astype(np.uint8)
+
+train_df['empty'] = (pd.isna(train_df['lb_seg_rle'])) & (pd.isna(train_df['sb_seg_rle']))  \
+                    & (pd.isna(train_df['st_seg_rle']))
+
+skf = StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=SEED)
+for fold, (train_idx, val_idx) in enumerate(skf.split(train_df, train_df['empty'], groups=train_df["case_id_str"])):
+    train_df.loc[val_idx, 'fold'] = fold
 train_df["fold"] = train_df["fold"].astype(np.uint8)
-
 
 # ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
 # modified from: https://www.kaggle.com/inversion/run-length-decoding-quick-start
