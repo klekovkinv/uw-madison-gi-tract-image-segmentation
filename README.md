@@ -9,5 +9,6 @@
 1. `poetry install`  
 2. `poetry shell`  
 3. `cd src`  
-4. 
+4. `python produce_3d_data.py`  
+
 
