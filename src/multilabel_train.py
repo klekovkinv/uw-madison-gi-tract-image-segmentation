@@ -381,7 +381,7 @@ if __name__ == "__main__":
 
     parser.add_argument("-c", "--config", default="cfg_unet_multilabel", help="config filename")
     parser.add_argument("-f", "--fold", type=int, default=0, help="fold")
-    parser.add_argument("-s", "--seed", type=int, default=20220421, help="seed")
+    parser.add_argument("-s", "--seed", type=int, default=42, help="seed")
     parser.add_argument("-w", "--weights", default=None, help="the path of weights")
 
     parser_args, _ = parser.parse_known_args(sys.argv)
