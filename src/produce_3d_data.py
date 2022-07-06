@@ -12,6 +12,7 @@ from sklearn.model_selection import StratifiedGroupKFold
 
 # CONSTANTS
 DATA_DIR = '../data'
+OUTPUT_DIR = '../data/produced/'
 N_FOLDS = 5
 SEED = 42
 
@@ -105,6 +106,7 @@ for fold, (train_idx, val_idx) in enumerate(skf.split(train_df, train_df['empty'
     train_df.loc[val_idx, 'fold'] = fold
 train_df["fold"] = train_df["fold"].astype(np.uint8)
 
+
 # ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
 # modified from: https://www.kaggle.com/inversion/run-length-decoding-quick-start
 def rle_decode(mask_rle, shape, color=1):
@@ -175,7 +177,7 @@ def load_img_mask(l):
 
 loader = LoadImage()
 
-output_dir = "/kaggle/working/"
+#  output_dir = "/kaggle/working/"
 
 data_3d_info = []
 ct = 0
@@ -215,7 +217,7 @@ for group in train_df.groupby(["case_id_str", "day_num_str"]):
     group_affine[-1][-1] = 1.0
     group_fold = group[1][["fold"]].values[0][0]
 
-    group_root_dir = os.path.join(output_dir, "train", case_id_str, group_id)
+    group_root_dir = os.path.join(OUTPUT_DIR, "train", case_id_str, group_id)
     os.makedirs(group_root_dir)
     # write image
     writer = NibabelWriter()

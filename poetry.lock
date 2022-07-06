@@ -63,6 +63,30 @@ tqdm = ["tqdm (>=4.47.0)"]
 transformers = ["transformers"]
 
 [[package]]
+name = "nibabel"
+version = "4.0.1"
+description = "Access a multitude of neuroimaging data formats"
+category = "main"
+optional = false
+python-versions = ">=3.7"
+
+[package.dependencies]
+numpy = ">=1.17"
+packaging = ">=17.0"
+
+[package.extras]
+all = ["pydicom (>=1.0.0)", "pillow", "gitpython", "twine", "matplotlib (>=1.5.3)", "numpydoc", "sphinx (>=0.3,<3)", "texext", "h5py", "scipy", "flake8", "coverage", "pytest (!=5.3.4)", "pytest-cov", "pytest-doctestplus", "pyzstd (>=0.14.3)"]
+dev = ["gitpython", "twine"]
+dicom = ["pydicom (>=1.0.0)"]
+dicomfs = ["pydicom (>=1.0.0)", "pillow"]
+doc = ["matplotlib (>=1.5.3)", "numpydoc", "sphinx (>=0.3,<3)", "texext"]
+minc2 = ["h5py"]
+spm = ["scipy"]
+style = ["flake8"]
+test = ["coverage", "pytest (!=5.3.4)", "pytest-cov", "pytest-doctestplus"]
+zstd = ["pyzstd (>=0.14.3)"]
+
+[[package]]
 name = "numpy"
 version = "1.20.0"
 description = "NumPy is the fundamental package for array computing with Python."
@@ -274,7 +298,7 @@ python-versions = ">=3.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "d12fe570e41fb887da17ce911016ac00e2a5d6fb5d9765c761ba778f3925349e"
+content-hash = "d1fe8859cb94c0865a86952c8f85537b3e510e00a9cb4fb97233b663b986c846"
 
 [metadata.files]
 dataclasses = [
@@ -290,6 +314,10 @@ joblib = [
 ]
 monai = [
     {file = "monai-0.9.0-202206131636-py3-none-any.whl", hash = "sha256:8c771c7676a4a70e3247a86d9009f4711e2c0d7f55bcd64aa30e8381065dbed1"},
+]
+nibabel = [
+    {file = "nibabel-4.0.1-py3-none-any.whl", hash = "sha256:4b148a436635c264457945df9286cfad4993688ee7af3e4a5f12d6a31427cdbc"},
+    {file = "nibabel-4.0.1.tar.gz", hash = "sha256:221f373a38005a911c562396070d6782edf34ee36c560b96ae3fe6dd0ed5c462"},
 ]
 numpy = [
     {file = "numpy-1.20.0-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:89bd70c9ad540febe6c28451ba225eb4e49d27f64728357f512c808002325dfa"},
