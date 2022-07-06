@@ -137,3 +137,8 @@ data/
 # MONAI
 MONAI/
 
+# csv
+src/*.csv
+
+# json
+src/*.json
