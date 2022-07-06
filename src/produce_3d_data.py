@@ -1,6 +1,7 @@
 from glob import glob
 import json
 import os
+import shutil
 
 from monai.transforms import LoadImage
 from monai.data import NibabelWriter
@@ -13,20 +14,10 @@ from sklearn.model_selection import StratifiedGroupKFold
 # CONSTANTS
 DATA_DIR = '../data'
 OUTPUT_DIR = '../data/produced/'
+TRAIN_CSV = os.path.join(DATA_DIR, "train.csv")
+
 N_FOLDS = 5
 SEED = 42
-
-# Open the training dataframe and display the initial dataframe
-# the way to process the df refers to:
-# https://www.kaggle.com/code/dschettler8845/uwmgit-deeplabv3-end-to-end-pipeline-tf
-
-#DATA_DIR = "../input/uw-madison-gi-tract-image-segmentation/"
-
-TRAIN_CSV = os.path.join(DATA_DIR, "train.csv")
-train_df = pd.read_csv(TRAIN_CSV)
-
-# Get all training images
-all_train_images = glob(os.path.join(DATA_DIR, "train", "**", "*.png"), recursive=True)
 
 
 def get_filepath_from_partial_identifier(_ident, file_list):
@@ -89,28 +80,10 @@ def df_preprocessing(df, globbed_file_list, is_test=False):
     return df
 
 
-train_df = df_preprocessing(train_df, all_train_images)
-# I use the same data splits as AWSAF does
-# the splits.csv refers to:
-# https://www.kaggle.com/code/awsaf49/uwmgi-unet-train-pytorch/
-
-#splits = pd.read_csv("../input/uwdatapreprocessing/splits.csv")
-# train_df = train_df.merge(splits, on="id")
-# train_df["fold"] = train_df["fold"].astype(np.uint8)
-
-train_df['empty'] = (pd.isna(train_df['lb_seg_rle'])) & (pd.isna(train_df['sb_seg_rle']))  \
-                    & (pd.isna(train_df['st_seg_rle']))
-
-skf = StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=SEED)
-for fold, (train_idx, val_idx) in enumerate(skf.split(train_df, train_df['empty'], groups=train_df["case_id_str"])):
-    train_df.loc[val_idx, 'fold'] = fold
-train_df["fold"] = train_df["fold"].astype(np.uint8)
-
-
-# ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
-# modified from: https://www.kaggle.com/inversion/run-length-decoding-quick-start
 def rle_decode(mask_rle, shape, color=1):
     """ TBD
+   ref: https://www.kaggle.com/paulorzp/run-length-encode-and-decode
+   modified from: https://www.kaggle.com/inversion/run-length-decoding-quick-start
 
     Args:
         mask_rle (str): run-length as string formated (start length)
@@ -175,94 +148,112 @@ def load_img_mask(l):
 
     return img_data[0], all_mask, mask_arr
 
-loader = LoadImage()
 
-#  output_dir = "/kaggle/working/"
+if __name__ == '__main__':
+    if os.path.exists(OUTPUT_DIR):
+        shutil.rmtree(OUTPUT_DIR)
 
-data_3d_info = []
-ct = 0
-for group in train_df.groupby(["case_id_str", "day_num_str"]):
+    train_df = pd.read_csv(TRAIN_CSV)
 
-    case_3d_img, case_3d_mask, case_3d_mask_multiclass = [], [], []
+    # Get all training images
+    all_train_images = glob(os.path.join(DATA_DIR, "train", "**", "*.png"), recursive=True)
 
-    case_id_str, day_num_str = group[0]
-    group_id = case_id_str + "_" + day_num_str
-    group_df = group[1].sort_values("slice_id", ascending=True)
-    n_slices = group_df.shape[0]
-    for idx in range(n_slices):
-        slc = group_df.iloc[idx]
-        slc_img, slc_mask, slc_multiclass_mask = load_img_mask(slc)
-        case_3d_img.append(slc_img)
-        case_3d_mask.append(slc_mask)
-        case_3d_mask_multiclass.append(slc_multiclass_mask)
+    train_df = df_preprocessing(train_df, all_train_images)
 
-    case_3d_img = np.stack(case_3d_img, axis=-1)
-    case_3d_mask = np.stack(case_3d_mask, axis=-1)
-    case_3d_mask = np.transpose(case_3d_mask, [2, 1, 3, 0])  # c w h d to h w d c
-    case_3d_mask_multiclass = np.stack(case_3d_mask_multiclass, axis=-1)
-    case_3d_mask_multiclass = np.transpose(case_3d_mask_multiclass, [1, 0, 2])  # w h d to h w d
+    train_df['empty'] = (pd.isna(train_df['lb_seg_rle'])) & (pd.isna(train_df['sb_seg_rle'])) \
+                        & (pd.isna(train_df['st_seg_rle']))
 
-    assert np.all(case_3d_mask.astype(np.uint8) == case_3d_mask)
-    case_3d_mask = case_3d_mask.astype(np.uint8)
+    skf = StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=SEED)
+    for fold, (train_idx, val_idx) in enumerate(skf.split(train_df, train_df['empty'], groups=train_df["case_id_str"])):
+        train_df.loc[val_idx, 'fold'] = fold
+    train_df["fold"] = train_df["fold"].astype(np.uint8)
 
-    if case_3d_mask.shape[:-1] != case_3d_img.shape:
-        print("shape not match on group: ", group_id)
+    loader = LoadImage()
 
-    group_spacing = group[1][["px_spacing_h"]].values[0][0]
+    data_3d_info = []
+    ct = 0
+    for group in train_df.groupby(["case_id_str", "day_num_str"]):
 
-    group_affine = np.eye(4) * group_spacing
-    # Update: https://www.kaggle.com/competitions/uw-madison-gi-tract-image-segmentation/discussion/319053
-    # all z-axis spacing is 3
-    group_affine[-2][-2] = 3.0
-    group_affine[-1][-1] = 1.0
-    group_fold = group[1][["fold"]].values[0][0]
+        case_3d_img, case_3d_mask, case_3d_mask_multiclass = [], [], []
 
-    group_root_dir = os.path.join(OUTPUT_DIR, "train", case_id_str, group_id)
-    os.makedirs(group_root_dir)
-    # write image
-    writer = NibabelWriter()
-    writer.set_data_array(case_3d_img, channel_dim=None)
-    writer.set_metadata({"affine": group_affine, "original_affine": group_affine, "dtype": np.int16})
-    writer.write(f"{group_root_dir}/{group_id}_image.nii.gz", verbose=False)
+        case_id_str, day_num_str = group[0]
+        group_id = case_id_str + "_" + day_num_str
+        group_df = group[1].sort_values("slice_id", ascending=True)
+        n_slices = group_df.shape[0]
+        for idx in range(n_slices):
+            slc = group_df.iloc[idx]
+            slc_img, slc_mask, slc_multiclass_mask = load_img_mask(slc)
+            case_3d_img.append(slc_img)
+            case_3d_mask.append(slc_mask)
+            case_3d_mask_multiclass.append(slc_multiclass_mask)
 
-    # write mask
-    writer = NibabelWriter()
-    writer.set_data_array(case_3d_mask, channel_dim=-1)
-    writer.set_metadata({"affine": group_affine, "original_affine": group_affine, "dtype": np.uint8})
-    writer.write(f"{group_root_dir}/{group_id}_mask.nii.gz", verbose=False)
+        case_3d_img = np.stack(case_3d_img, axis=-1)
+        case_3d_mask = np.stack(case_3d_mask, axis=-1)
+        case_3d_mask = np.transpose(case_3d_mask, [2, 1, 3, 0])  # c w h d to h w d c
+        case_3d_mask_multiclass = np.stack(case_3d_mask_multiclass, axis=-1)
+        case_3d_mask_multiclass = np.transpose(case_3d_mask_multiclass, [1, 0, 2])  # w h d to h w d
 
-    # write mask multiclass
-    writer = NibabelWriter()
-    writer.set_data_array(case_3d_mask_multiclass, channel_dim=None)
-    writer.set_metadata({"affine": group_affine, "original_affine": group_affine, "dtype": np.uint8})
-    writer.write(f"{group_root_dir}/{group_id}_mask_multiclass.nii.gz", verbose=False)
+        assert np.all(case_3d_mask.astype(np.uint8) == case_3d_mask)
+        case_3d_mask = case_3d_mask.astype(np.uint8)
 
-    data_3d_info.append({
-        "id": group_id,
-        "fold": group_fold,
-        "image_path": f"{group_root_dir}/{group_id}_image.nii.gz",
-        "mask_path": f"{group_root_dir}/{group_id}_mask.nii.gz",
-        "mask_multiclass_path": f"{group_root_dir}/{group_id}_mask_multiclass.nii.gz",
-    })
+        if case_3d_mask.shape[:-1] != case_3d_img.shape:
+            print("shape not match on group: ", group_id)
 
-    ct += 1
-    print("finish: ", ct, " shape: ", case_3d_mask.shape)
+        group_spacing = group[1][["px_spacing_h"]].values[0][0]
 
-data_3d_info = pd.DataFrame(data_3d_info)
+        group_affine = np.eye(4) * group_spacing
+        # Update: https://www.kaggle.com/competitions/uw-madison-gi-tract-image-segmentation/discussion/319053
+        # all z-axis spacing is 3
+        group_affine[-2][-2] = 3.0
+        group_affine[-1][-1] = 1.0
+        group_fold = group[1][["fold"]].values[0][0]
 
-data_3d_info.to_csv("data_3d_info.csv", index=False)
+        group_root_dir = os.path.join(OUTPUT_DIR, "train", case_id_str, group_id)
+        os.makedirs(group_root_dir)
+        # write image
+        writer = NibabelWriter()
+        writer.set_data_array(case_3d_img, channel_dim=None)
+        writer.set_metadata({"affine": group_affine, "original_affine": group_affine, "dtype": np.int16})
+        writer.write(f"{group_root_dir}/{group_id}_image.nii.gz", verbose=False)
 
-for fold in range(5):
-    train_data, val_data = [], []
-    train_df = data_3d_info[data_3d_info["fold"] != fold]
-    val_df = data_3d_info[data_3d_info["fold"] == fold]
+        # write mask
+        writer = NibabelWriter()
+        writer.set_data_array(case_3d_mask, channel_dim=-1)
+        writer.set_metadata({"affine": group_affine, "original_affine": group_affine, "dtype": np.uint8})
+        writer.write(f"{group_root_dir}/{group_id}_mask.nii.gz", verbose=False)
 
-    for line in train_df.values:
-        train_data.append({"image": line[2], "mask": line[3], "mask_multiclass": line[4], "id": line[0]})
-    for line in val_df.values:
-        val_data.append({"image": line[2], "mask": line[3], "mask_multiclass": line[4], "id": line[0]})
+        # write mask multiclass
+        writer = NibabelWriter()
+        writer.set_data_array(case_3d_mask_multiclass, channel_dim=None)
+        writer.set_metadata({"affine": group_affine, "original_affine": group_affine, "dtype": np.uint8})
+        writer.write(f"{group_root_dir}/{group_id}_mask_multiclass.nii.gz", verbose=False)
 
-    all_data = {"train": train_data, "val": val_data}
+        data_3d_info.append({
+            "id": group_id,
+            "fold": group_fold,
+            "image_path": f"{group_root_dir}/{group_id}_image.nii.gz",
+            "mask_path": f"{group_root_dir}/{group_id}_mask.nii.gz",
+            "mask_multiclass_path": f"{group_root_dir}/{group_id}_mask_multiclass.nii.gz",
+        })
 
-    with open(f"dataset_3d_fold_{fold}.json", 'w') as f:
-        json.dump(all_data, f)
+        ct += 1
+        print("finish: ", ct, " shape: ", case_3d_mask.shape)
+
+    data_3d_info = pd.DataFrame(data_3d_info)
+
+    data_3d_info.to_csv("data_3d_info.csv", index=False)
+
+    for fold in range(5):
+        train_data, val_data = [], []
+        train_df = data_3d_info[data_3d_info["fold"] != fold]
+        val_df = data_3d_info[data_3d_info["fold"] == fold]
+
+        for line in train_df.values:
+            train_data.append({"image": line[2], "mask": line[3], "mask_multiclass": line[4], "id": line[0]})
+        for line in val_df.values:
+            val_data.append({"image": line[2], "mask": line[3], "mask_multiclass": line[4], "id": line[0]})
+
+        all_data = {"train": train_data, "val": val_data}
+
+        with open(f"dataset_3d_fold_{fold}.json", 'w') as f:
+            json.dump(all_data, f)
