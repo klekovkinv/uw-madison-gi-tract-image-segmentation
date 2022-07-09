@@ -16,7 +16,7 @@ DATA_DIR = '../data'
 OUTPUT_DIR = '../data/produced/'
 TRAIN_CSV = os.path.join(DATA_DIR, "train.csv")
 
-N_FOLDS = 5
+N_FOLDS = 3
 SEED = 42
 
 
@@ -243,7 +243,7 @@ if __name__ == '__main__':
 
     data_3d_info.to_csv("data_3d_info.csv", index=False)
 
-    for fold in range(5):
+    for fold in range(N_FOLDS):
         train_data, val_data = [], []
         train_df = data_3d_info[data_3d_info["fold"] != fold]
         val_df = data_3d_info[data_3d_info["fold"] == fold]

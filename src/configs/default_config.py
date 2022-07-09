@@ -5,10 +5,10 @@ from types import SimpleNamespace
 cfg = SimpleNamespace(**{})
 
 # data path
-cfg.data_dir = "/workspace/data/uw-gi-tract/"
+cfg.data_dir = "./"
 cfg.fold = 0
 
-cfg.test_df = cfg.data_dir + "sample_submission.csv"
+cfg.test_df = "../data/sample_submission.csv"
 cfg.output_dir = "./output/weights/"
 
 # dataset
