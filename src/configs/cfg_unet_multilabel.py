@@ -42,7 +42,7 @@ cfg = basic_cfg
 cfg.train = True
 cfg.eval = True
 cfg.eval_epochs = 10
-cfg.start_eval_epoch = 200  # when use large lr, can set a large num
+cfg.start_eval_epoch = 100  # when use large lr, can set a large num
 cfg.run_org_eval = False
 cfg.run_tta_val = False
 cfg.load_best_weights = False
@@ -54,7 +54,7 @@ cfg.lr_mode = "warmup_restart"
 cfg.lr = 5e-4
 cfg.min_lr = 2e-4
 cfg.weight_decay = 1e-6
-cfg.epochs = 1000
+cfg.epochs = 500
 cfg.restart_epoch = 100  # only for warmup_restart
 
 cfg.finetune_lb = -1
