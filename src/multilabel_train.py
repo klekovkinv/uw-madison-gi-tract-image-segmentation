@@ -385,16 +385,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="")
 
     parser.add_argument("-c", "--config", default="cfg_unet_multilabel", help="config filename")
-    #parser.add_argument("-f", "--fold", type=int, default=0, help="fold")
+    parser.add_argument("-f", "--fold", type=int, default=0, help="fold")
     parser.add_argument("-s", "--seed", type=int, default=42, help="seed")
     parser.add_argument("-w", "--weights", default=None, help="the path of weights")
 
     parser_args, _ = parser.parse_known_args(sys.argv)
 
-    for fold in range(5):
-        cfg = importlib.import_module(parser_args.config).cfg
-        cfg.fold = fold
-        cfg.seed = parser_args.seed
-        cfg.weights = parser_args.weights
+    cfg = importlib.import_module(parser_args.config).cfg
+    cfg.fold = parser_args.fold
+    cfg.seed = parser_args.seed
+    cfg.weights = parser_args.weights
 
-        main(cfg)
+    main(cfg)
