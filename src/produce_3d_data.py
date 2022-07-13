@@ -16,7 +16,7 @@ DATA_DIR = '../data'
 OUTPUT_DIR = '../data/produced/'
 TRAIN_CSV = os.path.join(DATA_DIR, "train.csv")
 
-N_FOLDS = 3
+N_FOLDS = 5
 SEED = 42
 
 
