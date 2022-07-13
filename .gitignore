@@ -142,3 +142,6 @@ src/*.csv
 
 # json
 src/*.json
+
+# outputs
+src/output/
